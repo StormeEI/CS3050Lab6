@@ -46,10 +46,11 @@ typedef struct {
 
 // Helper function to calculate haversine distance
 double haversine(double lat1, double lon1, double lat2, double lon2) {
-    double dlat = (lat2 - lat1) * M_PI / 180.0;
-    double dlon = (lon2 - lon1) * M_PI / 180.0;
-    lat1 = lat1 * M_PI / 180.0;
-    lat2 = lat2 * M_PI / 180.0;
+    double PI = 3.14159;
+    double dlat = (lat2 - lat1) * PI / 180.0;
+    double dlon = (lon2 - lon1) * PI / 180.0;
+    lat1 = lat1 * PI / 180.0;
+    lat2 = lat2 * PI / 180.0;
     
     double a = sin(dlat/2) * sin(dlat/2) + 
                cos(lat1) * cos(lat2) * sin(dlon/2) * sin(dlon/2);
@@ -255,7 +256,8 @@ int bellman_ford(Graph* g, int start_idx, int end_idx, double* dist, int* prev, 
             edge = edge->next;
         }
     }
-    
+    (void)end_idx;
+
     return 1; // No negative cycle
 }
 
@@ -307,7 +309,9 @@ int main(int argc, char* argv[]) {
     }
     
     char line[256];
-    fgets(line, sizeof(line), fp); // Skip header
+    if (!fgets(line, sizeof(line), fp)) {
+        fclose(fp);
+    } // Skip header
     
     while (fgets(line, sizeof(line), fp)) {
         int id;
@@ -329,7 +333,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    fgets(line, sizeof(line), fp); // Skip header
+    if (!fgets(line, sizeof(line), fp)) {
+        fclose(fp);
+    } // Skip header
     
     while (fgets(line, sizeof(line), fp)) {
         int from, to;
