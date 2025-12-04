@@ -11,11 +11,16 @@
 #define EARTH_RADIUS 6371.0
 
 // Node structure
+
+// added earliest and latest
 typedef struct {
     int id;
     double lat;
     double lon;
+    int earliest;
+    int latest;
 } Node;
+///////////////////////////////
 
 // Edge structure
 typedef struct Edge {
@@ -136,37 +141,59 @@ void add_edge(Graph* g, int from, int to, double weight) {
 
 // Dijkstra's algorithm
 void dijkstra(Graph* g, int start_idx, int end_idx, double* dist, int* prev, int* nodes_explored) {
+    // create and initialize the queue
     PriorityQueue pq;
     pq_init(&pq);
     
+    // set everything to infinity
     for (int i = 0; i < g->node_count; i++) {
         dist[i] = DBL_MAX;
         prev[i] = -1;
     }
     
+    // put the starting index on the queue and set explored nodes to 0
     dist[start_idx] = 0;
     pq_push(&pq, start_idx, 0);
     *nodes_explored = 0;
     
+    // loops until queue empty
     while (!pq_empty(&pq)) {
+        // takes top node of queue and explore its info
         PQNode current = pq_pop(&pq);
         int u = current.node;
         (*nodes_explored)++;
         
+        // ends loop fully
         if (u == end_idx) break;
         
+        // pretty much if weve already been there
         if (current.priority > dist[u]) continue;
         
+        // creates list of edges
         Edge* edge = g->adj_list[u];
         while (edge != NULL) {
+            // neighbor
             int v = edge->to;
             double alt = dist[u] + edge->weight;
-            
+       
+            // if our path is shorter just set it to the min
+            if (alt < g->nodes[v].earliest) {
+                alt = g->nodes[v].earliest;
+            }
+
+            // if our path is greater go to the next neighbor first
+            if (alt > g->nodes[v].latest) {
+                edge = edge->next;
+                continue;
+            }
+
+            // if alternate is best path
             if (alt < dist[v]) {
                 dist[v] = alt;
                 prev[v] = u;
                 pq_push(&pq, v, alt);
             }
+            // next edge
             edge = edge->next;
         }
     }
@@ -313,17 +340,21 @@ int main(int argc, char* argv[]) {
         fclose(fp);
     } // Skip header
     
+    // add getting for earliest and latest
     while (fgets(line, sizeof(line), fp)) {
-        int id;
+        int id, earliest, latest;
         double lat, lon;
-        if (sscanf(line, "%d,%lf,%lf", &id, &lat, &lon) == 3) {
+        if (sscanf(line, "%d,%lf,%lf,%d,%d", &id, &lat, &lon, &earliest, &latest) == 5) {
             g.nodes[g.node_count].id = id;
             g.nodes[g.node_count].lat = lat;
             g.nodes[g.node_count].lon = lon;
+            g.nodes[g.node_count].earliest = earliest;
+            g.nodes[g.node_count].latest = latest;
             g.node_ids[g.node_count] = id;
             g.node_count++;
         }
     }
+    /////////////////////////////////////
     fclose(fp);
     
     // Load edges
@@ -382,8 +413,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    print_path(&g, prev, start_idx, end_idx, dist[end_idx]);
-    printf("Nodes explored: %d\n", nodes_explored);
+    if (dist[end_idx] == DBL_MAX) {
+        printf("No feasible path from %d to %d satisfying latest time constraint\n", start_idx + 1, end_idx + 1);
+    } else {
+        print_path(&g, prev, start_idx, end_idx, dist[end_idx]);
+        printf("Nodes explored: %d\n", nodes_explored);
+    }
     
     // Cleanup
     for (int i = 0; i < g.node_count; i++) {
