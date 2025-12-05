@@ -27,6 +27,7 @@ typedef struct Edge {
     int to;
     double weight;
     struct Edge* next;
+    int priority;
 } Edge;
 
 // Graph structure
@@ -131,10 +132,11 @@ int find_node_index(Graph* g, int node_id) {
     return -1;
 }
 
-void add_edge(Graph* g, int from, int to, double weight) {
+void add_edge(Graph* g, int from, int to, double weight, int priority) {
     Edge* edge = (Edge*)malloc(sizeof(Edge));
     edge->to = to;
     edge->weight = weight;
+    edge->priority = priority;
     edge->next = g->adj_list[from];
     g->adj_list[from] = edge;
 }
@@ -355,6 +357,7 @@ int main(int argc, char* argv[]) {
         }
     }
     /////////////////////////////////////
+
     fclose(fp);
     
     // Load edges
@@ -368,17 +371,20 @@ int main(int argc, char* argv[]) {
         fclose(fp);
     } // Skip header
     
+    // adjusted for getting priority
     while (fgets(line, sizeof(line), fp)) {
-        int from, to;
+        int from, to, priority;
         double distance;
-        if (sscanf(line, "%d,%d,%lf", &from, &to, &distance) == 3) {
+        if (sscanf(line, "%d,%d,%lf,%d", &from, &to, &distance, &priority) == 4) {
             int from_idx = find_node_index(&g, from);
             int to_idx = find_node_index(&g, to);
             if (from_idx != -1 && to_idx != -1) {
-                add_edge(&g, from_idx, to_idx, distance);
+                add_edge(&g, from_idx, to_idx, distance, priority);
             }
         }
     }
+    /////////////////////////////////
+
     fclose(fp);
     
     // Find start and end indices
@@ -413,13 +419,15 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
+    // runs for if no feasible path
     if (dist[end_idx] == DBL_MAX) {
         printf("No feasible path from %d to %d satisfying latest time constraint\n", start_idx + 1, end_idx + 1);
     } else {
         print_path(&g, prev, start_idx, end_idx, dist[end_idx]);
         printf("Nodes explored: %d\n", nodes_explored);
     }
-    
+    /////////////////////////////////
+
     // Cleanup
     for (int i = 0; i < g.node_count; i++) {
         Edge* edge = g.adj_list[i];
