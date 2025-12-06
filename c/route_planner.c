@@ -136,7 +136,11 @@ void add_edge(Graph* g, int from, int to, double weight, int priority) {
     Edge* edge = (Edge*)malloc(sizeof(Edge));
     edge->to = to;
     edge->weight = weight;
+
+    // added
     edge->priority = priority;
+    /////////////
+
     edge->next = g->adj_list[from];
     g->adj_list[from] = edge;
 }
@@ -151,7 +155,7 @@ void dijkstra(Graph* g, int start_idx, int end_idx, double* dist, int* prev, int
     for (int i = 0; i < g->node_count; i++) {
         dist[i] = DBL_MAX;
         prev[i] = -1;
-    }
+    }   
     
     // put the starting index on the queue and set explored nodes to 0
     dist[start_idx] = 0;
@@ -171,35 +175,90 @@ void dijkstra(Graph* g, int start_idx, int end_idx, double* dist, int* prev, int
         // pretty much if weve already been there
         if (current.priority > dist[u]) continue;
         
-        // creates list of edges
+
+        // PART 1.2
+
+        // stuff to track
+        int highprio = 0;
+        int medprio = 0;
+        double bestMedWeight = DBL_MAX;
+
+        // First just checks if there are any high or medium edges
         Edge* edge = g->adj_list[u];
+        while (edge != NULL) {
+            if (edge->priority == 3) {
+                highprio = 1;
+            } else if (edge->priority == 2) {
+                medprio = 1;
+                if (edge->weight < bestMedWeight) {
+                    bestMedWeight = edge->weight;
+                }
+            }
+            edge = edge->next;
+        }
+
+        // second run through to check 
+        edge = g->adj_list[u];
         while (edge != NULL) {
             // neighbor
             int v = edge->to;
+            int allow = 0;
+
+            // if there was a high priority go down it no matter what
+            if (highprio) {
+                if (edge->priority == 3) {
+                    allow = 1;
+                }
+            // if there was a medium priority then check which path to go down
+            } else if (medprio) {
+                // goes if med exists
+                if (edge->priority == 2) {
+                    allow = 1;
+                // goes if a medium exists but a low prio is 20% faster
+                } else if (edge->priority == 1 && edge->weight <= 0.8 * bestMedWeight) {
+                    allow = 1;
+                }
+            // goes if only low prio
+            } else {
+                if (edge->priority == 1) {
+                    allow = 1;
+                }
+            }
+
+            // goes if a path has been decided
+            if (!allow) {
+                edge = edge->next;
+                continue;
+            }
+
+            /////////////////////////////////////
+
             double alt = dist[u] + edge->weight;
-       
+
+            // PART 1.1
             // if our path is shorter just set it to the min
             if (alt < g->nodes[v].earliest) {
                 alt = g->nodes[v].earliest;
             }
-
             // if our path is greater go to the next neighbor first
             if (alt > g->nodes[v].latest) {
                 edge = edge->next;
                 continue;
             }
+            ///////////////////////////////////////
 
-            // if alternate is best path
             if (alt < dist[v]) {
                 dist[v] = alt;
                 prev[v] = u;
                 pq_push(&pq, v, alt);
             }
+            
             // next edge
             edge = edge->next;
         }
     }
 }
+
 
 // A* algorithm
 void astar(Graph* g, int start_idx, int end_idx, double* dist, int* prev, int* nodes_explored) {
